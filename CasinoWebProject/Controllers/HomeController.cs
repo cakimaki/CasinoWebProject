@@ -1,7 +1,7 @@
 using CasinoWebProject.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
-
+using CasinoWebProject.DTOs;
 namespace CasinoWebProject.Controllers
 {
     public class HomeController : Controller

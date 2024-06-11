@@ -1,21 +1,26 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using CasinoWebProject.Models;
 using System.Threading.Tasks;
+using CasinoWebProject.ViewModels;
+using CasinoWebProject.DTOs;
 
 namespace CasinoWebProject.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController] // Add this attribute to enforce API conventions
-    public class AccountApiController : ControllerBase // Use ControllerBase for API controllers
+    [ApiController]
+    public class AccountApiController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
 
-        public AccountApiController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
+        public AccountApiController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, RoleManager<IdentityRole> roleManager)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _roleManager = roleManager;
         }
 
         [HttpPost("register")]
@@ -27,6 +32,9 @@ namespace CasinoWebProject.Controllers
                 var result = await _userManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {
+                    // Add the user to the "User" role by default
+                    await _userManager.AddToRoleAsync(user, "User");
+
                     await _signInManager.SignInAsync(user, isPersistent: false);
                     return Ok(new { message = "Registration successful!" });
                 }
@@ -67,6 +75,31 @@ namespace CasinoWebProject.Controllers
         public IActionResult IsLoggedIn()
         {
             return Ok(new { isLoggedIn = User.Identity.IsAuthenticated });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("assign-role")]
+        public async Task<IActionResult> AssignRole([FromBody] AssignRoleModel model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+            {
+                return NotFound(new { message = "User not found" });
+            }
+
+            var roleExists = await _roleManager.RoleExistsAsync(model.Role);
+            if (!roleExists)
+            {
+                return BadRequest(new { message = "Role does not exist" });
+            }
+
+            var result = await _userManager.AddToRoleAsync(user, model.Role);
+            if (result.Succeeded)
+            {
+                return Ok(new { message = "Role assigned successfully" });
+            }
+
+            return BadRequest(result.Errors);
         }
     }
 }

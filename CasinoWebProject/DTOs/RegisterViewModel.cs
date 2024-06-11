@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CasinoWebProject.Models
+namespace CasinoWebProject.DTOs
 {
     public class RegisterViewModel
     {
